@@ -15,6 +15,7 @@ package org.mindrot;
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import junit.framework.TestCase;
+import org.apache.commons.codec.binary.Base64;
 
 /**
  * JUnit unit tests for BCrypt routines
@@ -91,6 +92,65 @@ public class TestBCrypt extends TestCase {
 	 */
 	public static void main(String[] args) {
 		junit.textui.TestRunner.run(TestBCrypt.class);
+	}
+
+	public static void print_bytes(String label, byte[] raw) {
+	    System.out.print(label);
+	    for (int i = 0; i < raw.length; ++i){
+	        System.out.print(raw[i]&0xff);
+	        System.out.print(" ");
+	    }
+	    System.out.println("");
+	}
+
+	public void testExample1() {
+	    test_password("deafness haddock", "x0KtxlVAPK/QycH+JBmtAy/RjP8iy0k4LC2l5wd9GePo+oqlUpOy+\n");
+	}
+
+	public void testExample2() {
+	    test_password("grey4starships", "PNOCi9l355zw1/QKSRPpaojv90LLaKkc1/2Wa2PODSX8oIQbn69++\n");
+	}
+
+	public void testExample3() {
+	    test_password("eggs.fly_west", "ivn6gdoYAFcfyYr7nJeio/G4AhNcoM1XdKXzGTa9OXvNocrG/mtJ+\n");
+	}
+
+	public void test_password(String input_password, String input_record) {
+	    System.out.println("Example: " + input_password);
+	    int bf_crypt_ciphertext[] = {
+	        0x4f727068, 0x65616e42, 0x65686f6c,
+	        0x64657253, 0x63727944, 0x6f756274
+	    };
+	    BCrypt b = new BCrypt();
+	    byte dc_data[] = null;
+	    try{
+	        dc_data = Base64.decodeBase64(input_record.getBytes("UTF-8"));
+	        print_bytes("data: ", dc_data);
+	    }catch(Exception e){
+	        assertEquals("Couldn't decode base64", true, false);
+	    }
+	    byte hash[] = new byte[23];
+	    System.arraycopy(dc_data, 0, hash, 0, hash.length);
+	    print_bytes("hash: ", hash);
+	    byte salt[] = new byte[16];
+	    System.arraycopy(dc_data, hash.length, salt, 0, salt.length);
+	    print_bytes("salt: ", salt);
+	    byte trial[] = null;
+	    try{
+	        byte tmp[] = b.crypt_raw((input_password + "\000").getBytes("UTF-8"), salt, 8, (int[])bf_crypt_ciphertext.clone());
+	        trial = new byte[tmp.length - 1];
+	        System.arraycopy(tmp, 0, trial, 0, trial.length);
+	        print_bytes("trial: ", trial);
+	    }catch(Exception e){
+	        assertEquals("Exception from crypt_raw", true, false);
+	    }
+
+	    assertEquals("Hash lengths don't match", hash.length, trial.length);
+	    byte ret = 0;
+	    for (int i = 0; i < trial.length; i++)
+	        ret |= hash[i] ^ trial[i];
+	    assertEquals("Hashes don't match", ret, 0);
+	    System.out.println("");
 	}
 
 	/**
